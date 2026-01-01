@@ -131,7 +131,7 @@ const Navbar = () => {
 
               {/* Desktop Login Button */}
               <Link 
-                href="/login" 
+                href="/auth/signin" // CHANGED FROM /login TO /auth/signin
                 className="hidden sm:block bg-white text-green-900 px-4 sm:px-6 py-2 rounded-full font-semibold hover:bg-green-100 transition-colors text-sm sm:text-base"
               >
                 {translations[language].login}
@@ -221,7 +221,7 @@ const Navbar = () => {
 
               {/* Mobile Login Button */}
               <Link 
-                href="/login" 
+                href="/auth/signin" // CHANGED FROM /login TO /auth/signin
                 className="block w-full bg-white text-green-900 py-4 rounded-full font-semibold hover:bg-green-100 transition-colors text-center text-lg mb-6"
                 onClick={() => setIsMenuOpen(false)}
               >
@@ -257,7 +257,6 @@ const Navbar = () => {
           </div>
         </div>
       </nav>
-
     </>
   );
 };
