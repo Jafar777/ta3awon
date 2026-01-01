@@ -1,6 +1,6 @@
-// C:\Users\jafar\Desktop\ta3awon\components\DashboardSidebar.jsx
+// components/DashboardSidebar.jsx - Updated version
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
@@ -27,11 +27,35 @@ const DashboardSidebar = () => {
   const { data: session } = useSession();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [userStats, setUserStats] = useState({
+    totalDonations: 0,
+    totalDonated: 0
+  });
 
   const isAdmin = session?.user?.role === 'admin';
   const isModerator = session?.user?.role === 'moderator' || isAdmin;
 
-  // UPDATED MENU ORDER: Campaigns moved above Notifications
+  // Fetch user stats
+  const fetchUserStats = async () => {
+    if (!session?.user?.id) return;
+    
+    try {
+      const response = await fetch(`/api/users/${session.user.id}/stats`);
+      if (response.ok) {
+        const data = await response.json();
+        setUserStats(data);
+      }
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchUserStats();
+    }
+  }, [session]);
+
   const menuItems = [
     {
       name: language === 'ar' ? 'لوحة التحكم' : 'Dashboard',
@@ -40,7 +64,7 @@ const DashboardSidebar = () => {
       roles: ['user', 'moderator', 'admin']
     },
     {
-      name: language === 'ar' ? 'الحملات' : 'Campaigns',  // MOVED UP
+      name: language === 'ar' ? 'الحملات' : 'Campaigns',
       href: '/dashboard/campaigns',
       icon: <FaBullhorn />,
       roles: ['moderator', 'admin']
@@ -70,11 +94,11 @@ const DashboardSidebar = () => {
       roles: ['user', 'moderator', 'admin']
     },
     {
-      name: language === 'ar' ? 'الإشعارات' : 'Notifications',  // MOVED DOWN
+      name: language === 'ar' ? 'الإشعارات' : 'Notifications',
       href: '/dashboard/notifications',
       icon: <FaBell />,
       roles: ['user', 'moderator', 'admin'],
-      badge: 3
+      badge: 0 // Real badge count would come from API
     },
     {
       name: language === 'ar' ? 'الإعدادات' : 'Settings',
@@ -95,7 +119,6 @@ const DashboardSidebar = () => {
 
   return (
     <>
-  
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -119,21 +142,27 @@ const DashboardSidebar = () => {
             {isSidebarOpen && (
               <div className="flex items-center space-x-3 rtl:space-x-reverse">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-green-400 flex items-center justify-center">
-                  <span className="text-lg font-bold">ت</span>
+                  <span className="text-lg font-bold">
+                    {language === 'ar' ? 'ت' : 'T'}
+                  </span>
                 </div>
                 <div>
                   <h2 className="text-lg font-bold">
                     {language === 'ar' ? 'لوحة التحكم' : 'Dashboard'}
                   </h2>
                   <p className="text-xs text-green-200">
-                    {session?.user?.firstName || 'User'}
+                    {session?.user?.role === 'admin' ? (language === 'ar' ? 'مدير' : 'Admin') :
+                     session?.user?.role === 'moderator' ? (language === 'ar' ? 'مشرف' : 'Moderator') :
+                     (language === 'ar' ? 'مستخدم' : 'User')}
                   </p>
                 </div>
               </div>
             )}
             {!isSidebarOpen && (
               <div className="w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-green-400 flex items-center justify-center mx-auto">
-                <span className="text-lg font-bold">ت</span>
+                <span className="text-lg font-bold">
+                  {language === 'ar' ? 'ت' : 'T'}
+                </span>
               </div>
             )}
             <button
@@ -146,7 +175,7 @@ const DashboardSidebar = () => {
         </div>
 
         {/* User Info */}
-        {isSidebarOpen && (
+        {isSidebarOpen && session?.user && (
           <div className="p-6 border-b border-green-700">
             <div className="flex items-center space-x-3 rtl:space-x-reverse">
               <div className="relative">
@@ -159,33 +188,53 @@ const DashboardSidebar = () => {
               </div>
               <div>
                 <h3 className="font-semibold">
-                  {session?.user?.firstName} {session?.user?.lastName}
+                  {session.user.firstName} {session.user.lastName}
                 </h3>
                 <p className="text-sm text-green-200">
-                  {session?.user?.email}
+                  {session.user.email}
                 </p>
-                <span className="inline-block mt-1 px-2 py-1 text-xs bg-green-700 rounded-full">
-                  {session?.user?.role}
+                <span className="inline-block mt-1 px-2 py-1 text-xs bg-green-700 rounded-full capitalize">
+                  {language === 'ar' ? 
+                    (session.user.role === 'admin' ? 'مدير' :
+                     session.user.role === 'moderator' ? 'مشرف' : 'مستخدم') :
+                    session.user.role
+                  }
                 </span>
               </div>
             </div>
-            <div className="mt-4 p-3 bg-green-800/50 rounded-lg">
-              <p className="text-sm font-medium">
-                {language === 'ar' ? 'عملات التبرع' : 'Donation Coins'}
-              </p>
-              <div className="flex items-center justify-between mt-1">
-                <span className="text-2xl font-bold">50</span>
-                <span className="text-xs text-green-300">+5 هذا الأسبوع</span>
+            
+            {/* Real User Stats */}
+            {(session.user.role === 'user' && userStats.totalDonations > 0) && (
+              <div className="mt-4 p-3 bg-green-800/50 rounded-lg">
+                <p className="text-sm font-medium">
+                  {language === 'ar' ? 'تبرعاتك' : 'Your Donations'}
+                </p>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <div>
+                    <p className="text-xs text-green-300">
+                      {language === 'ar' ? 'عدد التبرعات' : 'Total Donations'}
+                    </p>
+                    <p className="text-lg font-bold">{userStats.totalDonations}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-green-300">
+                      {language === 'ar' ? 'إجمالي التبرع' : 'Total Donated'}
+                    </p>
+                    <p className="text-lg font-bold">
+                      ${userStats.totalDonated?.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
-        </div>
+            )}
+          </div>
         )}
 
         {/* Navigation Menu */}
         <nav className="flex-1 overflow-y-auto py-4">
           <ul className="space-y-1 px-3">
             {filteredMenuItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
                 <li key={item.href}>
                   <Link
@@ -206,7 +255,7 @@ const DashboardSidebar = () => {
                     {isSidebarOpen && (
                       <>
                         <span className="flex-1 font-medium">{item.name}</span>
-                        {item.badge && (
+                        {item.badge > 0 && (
                           <span className="px-2 py-1 text-xs bg-red-500 rounded-full">
                             {item.badge}
                           </span>
@@ -242,7 +291,9 @@ const DashboardSidebar = () => {
               <p className="text-xs text-green-300">
                 {language === 'ar' ? 'منصة تعاون السورية' : 'Syrian Cooperation Platform'}
               </p>
-              <p className="text-xs text-green-400 mt-1">v1.0.0</p>
+              <p className="text-xs text-green-400 mt-1">
+                {new Date().getFullYear()} © Ta3awon
+              </p>
             </div>
           )}
         </div>
@@ -255,7 +306,6 @@ const DashboardSidebar = () => {
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
-
     </>
   );
 };
